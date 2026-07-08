@@ -1,0 +1,9 @@
+apiVersion: v2
+name: server-test
+description: CI test chart for NotedThat/server
+version: 0.0.1
+type: application
+dependencies:
+  - name: server
+    version: "*"
+    repository: "file://../../charts/server"

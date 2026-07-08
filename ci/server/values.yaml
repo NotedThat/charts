@@ -1,0 +1,68 @@
+## Top-level values for parent-chart test template (test-render.yaml calls
+## server.image / server.serviceAccountName with the parent's context).
+image:
+  registry: ghcr.io
+  repository: notedthat/server
+  tag: "0.1.0"
+
+serviceAccount:
+  create: true
+  name: ""
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+## Subchart values — Helm scopes these into the server subchart's context.
+server:
+  replicaCount: 1
+
+  image:
+    registry: ghcr.io
+    repository: notedthat/server
+    tag: "0.1.0"
+
+  serviceAccount:
+    create: true
+
+  ingress:
+    enabled: true
+    hostname: test.notedthat.local
+    path: /
+    pathType: Prefix
+
+  autoscaling:
+    enabled: false
+
+  resourcesPreset: "micro"
+  resources: {}
+
+  extraEnvVars:
+    - name: TEST_VAR
+      value: "test"
+
+  containerPorts:
+    http: 8080
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+    maxUnavailable: ""
+
+  networkPolicy:
+    enabled: true
+    allowExternal: true
+    allowExternalEgress: false
+
+  # CI-only: exercises BOTH template paths. In production pick serviceMonitor
+  # OR podAnnotations, not both — running both causes duplicate scraping.
+  metrics:
+    enabled: true
+    podAnnotations:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      namespaceSelector:
+        any: true

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: test-chart
+description: Test consumer chart for NotedThat/common library
+version: 0.1.0
+type: application
+dependencies:
+  - name: common
+    version: "*"
+    repository: "file://../../charts/common"

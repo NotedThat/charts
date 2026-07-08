@@ -1,0 +1,70 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: v4.1.4
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+
+      - name: Run unit tests
+        run: |
+          if find charts/common -name '*_test.yaml' | grep -q .; then
+            helm unittest charts/common
+          else
+            echo "No unit test files found, skipping helm unittest"
+          fi
+
+  template-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: v4.1.4
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Build dependencies (common)
+        run: helm dependency update ci/common/
+
+      - name: Build dependencies (server)
+        run: |
+          helm dependency update charts/server
+          helm dependency update ci/server/
+
+      - name: Template common with defaults
+        run: helm template test ci/common/
+
+      - name: Template common with overrides
+        run: helm template test ci/common/ --set fullnameOverride=override-test --set global.imageRegistry=test.io
+
+      - name: Template common with storage class
+        run: helm template test ci/common/ --set global.storageClass=fast-ssd
+
+      - name: Template server with defaults
+        run: helm template test ci/server/
+
+      - name: Template server with overrides
+        run: helm template test ci/server/ --set server.fullnameOverride=override-test --set server.image.tag=latest

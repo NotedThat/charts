@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-test
+  namespace: {{ include "common.names.namespace" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  # Names helpers (_names.tpl)
+  name: {{ include "common.names.name" . }}
+  fullname: {{ include "common.names.fullname" . }}
+  chart: {{ include "common.names.chart" . }}
+
+  # Labels helpers (_labels.tpl)
+  matchLabels: |
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+
+  # Images helpers (_images.tpl)
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+  imageVersion: {{ include "common.images.version" (dict "imageRoot" .Values.image "chart" .Chart) }}
+
+  # Storage helpers (_storage.tpl)
+  storageClass: |
+    {{- include "common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global) | nindent 4 }}
+
+  # Capabilities helpers (_capabilities.tpl)
+  kubeVersion: {{ include "common.capabilities.kubeVersion" . }}
+  ingressApiVersion: {{ include "common.capabilities.ingress.apiVersion" . }}
+  rbacApiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+  hpaApiVersion: {{ include "common.capabilities.hpa.apiVersion" . }}
+
+  # Compatibility helpers (_compatibility.tpl)
+  isOpenshift: {{ include "common.compatibility.isOpenshift" . | default "false" }}
+
+  # Resources helpers (_resources.tpl)
+  resourcePreset: |
+    {{- include "common.resources.preset" (dict "type" "small") | nindent 4 }}
+
+  # TplValues helpers (_tplvalues.tpl)
+  renderedValue: {{ include "common.tplvalues.render" (dict "value" "hello-world" "context" $) }}
+
+  # Utils helpers (_utils.tpl)
+  envVar: {{ include "common.utils.fieldToEnvVar" (dict "field" "my-password") }}
+
+  # Ingress helpers (_ingress.tpl)
+  certManagerRequest: {{ include "common.ingress.certManagerRequest" (dict "annotations" .Values.ingress.annotations) | default "false" }}
+  supportsPathType: {{ include "common.ingress.supportsPathType" . | default "false" }}
+
+  # Warnings helpers (_warnings.tpl)
+  rollingTagWarning: {{ include "common.warnings.rollingTag" .Values.image | default "no-warning" | quote }}
+
+  # Affinities helpers (_affinities.tpl)
+  nodeAffinitySoft: |
+    {{- include "common.affinities.nodes.soft" (dict "key" "kubernetes.io/os" "values" (list "linux")) | nindent 4 }}
+
+  # Secrets helpers (_secrets.tpl)
+  secretName: {{ include "common.secrets.name" (dict "existingSecret" "" "defaultNameSuffix" "credentials" "context" $) }}
+
+  # Errors helpers (_errors.tpl)
+  {{- include "common.errors.insecureImages" (dict "images" (list .Values.image) "context" $) }}

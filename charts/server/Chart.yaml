@@ -1,0 +1,24 @@
+# Published as oci://ghcr.io/notedthat/charts/server
+apiVersion: v2
+name: server
+description: Helm chart for the NotedThat application server
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.28.0"
+home: https://github.com/NotedThat/charts
+sources:
+  - https://github.com/NotedThat/charts
+  - https://github.com/NotedThat/NotedThat
+maintainers:
+  - name: NotedThat
+keywords:
+  - notedthat
+  - knowledgebase
+  - markdown
+  - webdav
+  - mcp
+dependencies:
+  - name: common
+    version: "0.x.x"
+    repository: "file://../common"

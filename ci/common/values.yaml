@@ -1,0 +1,47 @@
+## Test values exercising all helper categories
+
+nameOverride: ""
+fullnameOverride: ""
+namespaceOverride: ""
+
+image:
+  registry: docker.io
+  repository: nginx
+  tag: "1.25"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+ingress:
+  enabled: false
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hostname: example.com
+  path: /
+
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 8Gi
+
+resources:
+  preset: small
+
+affinity: {}
+tolerations: []
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+
+commonLabels: {}

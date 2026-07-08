@@ -1,0 +1,26 @@
+{{- $localPort := .Values.service.port -}}
+NotedThat server is now installed.
+
+Get the server URL:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostname }}/
+{{- else }}
+  kubectl port-forward svc/{{ include "server.names.fullname" . }} {{ $localPort }}:{{ .Values.service.port }} -n {{ include "server.names.namespace" . }}
+  Then: http://localhost:{{ $localPort }}/
+{{- end }}
+
+Health check:
+  curl http://localhost:{{ $localPort }}/healthz
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics:
+{{- if .Values.metrics.serviceMonitor.enabled }}
+  Scraped via ServiceMonitor {{ include "server.names.fullname" . }} in namespace {{ include "server.names.namespace" . }}.
+{{- else if .Values.metrics.podAnnotations.enabled }}
+  Scraped via pod annotations (prometheus.io/scrape=true, path={{ .Values.metrics.path }}).
+{{- else }}
+  Exposed at {{ .Values.metrics.path }} on port {{ .Values.containerPorts.http }}, but no discovery is enabled.
+  Set metrics.serviceMonitor.enabled=true or metrics.podAnnotations.enabled=true to make Prometheus find it.
+{{- end }}
+  Warning: {{ .Values.metrics.path }} has no authentication. Restrict access via NetworkPolicy or a private topology.
+{{- end }}

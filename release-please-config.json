@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "include-v-in-tag": true,
+  "include-component-in-tag": true,
+  "separate-pull-requests": true,
+  "packages": {
+    "charts/common": {
+      "release-type": "helm",
+      "component": "common",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "charts/server": {
+      "release-type": "helm",
+      "component": "server",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

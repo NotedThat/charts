@@ -1,0 +1,137 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+replicaCount: 1
+
+image:
+  registry: ghcr.io
+  repository: notedthat/server
+  # Empty tag → falls back to Chart.appVersion (see common.images.image).
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+commonLabels: {}
+commonAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  # Matches the `notedthat` user baked into ghcr.io/notedthat/server (UID/GID 10001).
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+containerPorts:
+  http: 8080
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hostname: server.notedthat.local
+  path: /
+  pathType: Prefix
+  tls: false
+
+# Resource preset from common chart: nano/micro/small/medium/large/xlarge/2xlarge
+# When autoscaling is enabled, resource requests MUST be set for HPA to function
+resourcesPreset: "small"
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: ""
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: ""
+  maxUnavailable: 1
+
+networkPolicy:
+  enabled: true
+  allowExternal: true
+  allowExternalEgress: false
+  extraIngress: []
+  extraEgress: []
+  ingressNSMatchLabels: {}
+  ingressNSPodMatchLabels: {}
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# /metrics has NO auth and shares the server port. Restrict via networkPolicy
+# (source-scoped) or a service-mesh policy. Do NOT expose it via Ingress.
+metrics:
+  enabled: false
+  path: /metrics
+  # Empty = fall back to containerPorts.http. Applies to the prometheus.io/port
+  # pod annotation only — ServiceMonitor uses the Service's named 'http' port.
+  port: ""
+  # Vanilla Prometheus kubernetes_sd_configs pod discovery.
+  podAnnotations:
+    enabled: false
+  # Prometheus Operator CRD. Requires monitoring.coreos.com/v1 in the cluster.
+  # Off by default: enabling on a cluster without the CRD hard-fails helm install.
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: false
+    scheme: http
+    labels: {}
+    namespaceSelector: {}
+    relabelings: []
+    metricRelabelings: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+extraEnvVars: []
+extraVolumes: []
+extraVolumeMounts: []
