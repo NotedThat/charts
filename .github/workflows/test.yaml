@@ -49,6 +49,11 @@ jobs:
       - name: Build dependencies (common)
         run: helm dependency update ci/common/
 
+      - name: Build dependencies (server)
+        run: |
+          helm dependency update charts/server
+          helm dependency update ci/server/
+
       - name: Template common with defaults
         run: helm template test ci/common/
 
@@ -57,3 +62,9 @@ jobs:
 
       - name: Template common with storage class
         run: helm template test ci/common/ --set global.storageClass=fast-ssd
+
+      - name: Template server with defaults
+        run: helm template test ci/server/
+
+      - name: Template server with overrides
+        run: helm template test ci/server/ --set server.fullnameOverride=override-test --set server.image.tag=latest
