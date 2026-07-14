@@ -4,7 +4,7 @@ name: server
 description: Helm chart for the NotedThat application server
 type: application
 version: 0.1.1
-appVersion: "0.1.0"
+appVersion: "0.1.2"
 kubeVersion: ">=1.28.0"
 home: https://github.com/NotedThat/charts
 sources:
