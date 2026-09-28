@@ -30,8 +30,10 @@ The most common ways a chart goes wrong:
 Open the changed template, the values it reads (charts/*/values.yaml), the
 helpers it includes (charts/common/templates/) and the CI test charts
 (ci/*/templates/, ci/*/values.yaml) to know what it is supposed to do.
-Render ci/common with `helm template` when that settles it. Report only when
-you can state:
+Then prove it: render the chart with `helm template` and the values in
+question, and validate the output with `kubeconform` (the tools section
+says how), on the head and, for an error, on the base. A rendered manifest
+or an error message is the best evidence. Report only when you can state:
 
 1. the **trigger** -- the values (`--set` or a values file) that make it
    happen, defaults included;

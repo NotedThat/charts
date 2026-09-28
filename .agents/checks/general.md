@@ -48,6 +48,7 @@ that is set.
 
 Style, naming, formatting, refactoring ideas, "consider adding tests",
 anything in unchanged lines, and what `helm lint` and the CI template tests
-already enforce. No evidence, no finding.
+already enforce (run them to check; the tools section says how). No
+evidence, no finding.
 
 In `summary`, state what is wrong and where, the evidence, and the fix.
