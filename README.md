@@ -14,8 +14,8 @@ Charts are published as OCI artifacts to `ghcr.io/notedthat/charts`.
 ## Installation
 
 ```bash
-# Install the server chart
-helm install my-notedthat oci://ghcr.io/notedthat/charts/server --version 0.1.0
+# Install the latest server chart (see charts/server/README.md for the required values)
+helm install my-notedthat oci://ghcr.io/notedthat/charts/server -f values.yaml
 ```
 
 ## Development

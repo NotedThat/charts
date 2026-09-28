@@ -1,0 +1,57 @@
+suite: validation
+templates:
+  - deployment.yaml
+tests:
+  - it: fails without the required configuration
+    asserts:
+      - failedTemplate:
+          errorPattern: "auth.apiToken is required"
+      - failedTemplate:
+          errorPattern: "qdrant.url is required"
+      - failedTemplate:
+          errorPattern: "embedding.dimensions is required"
+
+  - it: renders with the required configuration
+    values:
+      - values/required.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects an invalid knowledge base slug
+    values:
+      - values/required.yaml
+    set:
+      knowledgebases: [notes, "My Notes"]
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects OIDC settings without an issuer
+    values:
+      - values/required.yaml
+    set:
+      oidc.audience: [notedthat]
+    asserts:
+      - failedTemplate:
+          errorPattern: "oidc.issuer is empty"
+
+  - it: requires a NATS URL for the nats events backend
+    values:
+      - values/required.yaml
+    set:
+      events.backend: nats
+    asserts:
+      - failedTemplate:
+          errorPattern: "events.nats.url is required"
+
+  - it: accepts existing secrets instead of inline credentials
+    values:
+      - values/required.yaml
+    set:
+      auth: {apiToken: "", webdav: {username: "", password: ""}, existingSecret: my-auth}
+      s3.accessKeyId: ""
+      s3.secretAccessKey: ""
+      s3.existingSecret: my-s3
+      embedding.apiKey: ""
+      embedding.existingSecret: my-embedding
+    asserts:
+      - notFailedTemplate: {}

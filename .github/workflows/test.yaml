@@ -9,6 +9,9 @@ on:
 jobs:
   unit-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -28,6 +31,16 @@ jobs:
           else
             echo "No unit test files found, skipping helm unittest"
           fi
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      # helm-unittest does not load a library chart from its .tgz, so unpack it.
+      - name: Run server unit tests
+        run: |
+          helm dependency update charts/server
+          (cd charts/server/charts && for f in *.tgz; do tar -xzf "$f" && rm "$f"; done)
+          helm unittest charts/server
 
   template-test:
     runs-on: ubuntu-latest

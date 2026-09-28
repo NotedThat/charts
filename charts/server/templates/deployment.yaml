@@ -1,3 +1,4 @@
+{{- include "server.validateValues" . -}}
 {{- $fullName := include "server.names.fullname" . -}}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
@@ -22,17 +23,17 @@ spec:
         {{- end }}
       {{- $prometheusPodAnnotations := dict -}}
       {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations.enabled -}}
-      {{- $metricsPort := .Values.metrics.port | default .Values.containerPorts.http | toString -}}
-      {{- $prometheusPodAnnotations = dict "prometheus.io/scrape" "true" "prometheus.io/path" .Values.metrics.path "prometheus.io/port" $metricsPort -}}
+      {{- $prometheusPodAnnotations = dict "prometheus.io/scrape" "true" "prometheus.io/path" .Values.metrics.path "prometheus.io/port" (toString .Values.containerPorts.metrics) -}}
       {{- end -}}
-      {{- $podAnnotations := merge (dict) (.Values.podAnnotations | default dict) $prometheusPodAnnotations -}}
-      {{- if $podAnnotations }}
+      {{- /* Credentials and settings are a startup snapshot: roll the pod when they change. */ -}}
+      {{- $checksums := dict "checksum/secret" (include "server.secretData" . | sha256sum) -}}
+      {{- $podAnnotations := merge (dict) (.Values.podAnnotations | default dict) $prometheusPodAnnotations $checksums }}
       annotations: {{- include "common.tplvalues.render" (dict "value" $podAnnotations "context" $) | nindent 8 }}
-      {{- end }}
     spec:
       serviceAccountName: {{ include "server.serviceAccountName" . }}
       {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- with .Values.nodeSelector }}
       nodeSelector: {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -43,8 +44,26 @@ spec:
       tolerations: {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: tmp
-          emptyDir: {}
+        # Upload and index staging (NOTEDTHAT_UPLOAD_TMP_DIR). Disk-backed on purpose.
+        - name: staging
+          emptyDir:
+            {{- if .Values.staging.sizeLimit }}
+            sizeLimit: {{ .Values.staging.sizeLimit }}
+            {{- else }} {}
+            {{- end }}
+        {{- if and .Values.oidc.issuer (or .Values.oidc.caCert.existingConfigMap .Values.oidc.caCert.existingSecret) }}
+        - name: oidc-ca
+          {{- if .Values.oidc.caCert.existingConfigMap }}
+          configMap:
+            name: {{ tpl .Values.oidc.caCert.existingConfigMap $ }}
+          {{- else }}
+          secret:
+            secretName: {{ tpl .Values.oidc.caCert.existingSecret $ }}
+          {{- end }}
+            items:
+              - key: {{ .Values.oidc.caCert.key }}
+                path: ca.pem
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -57,18 +76,29 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPorts.http }}
               protocol: TCP
-          env:
-            - name: PORT
-              value: {{ .Values.containerPorts.http | quote }}
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.containerPorts.metrics }}
+              protocol: TCP
+            {{- end }}
+          env: {{- include "server.env" . | nindent 12 }}
             {{- with .Values.extraEnvVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           resources: {{- include "common.resources.preset.apply" (dict "type" .Values.resourcesPreset "resources" .Values.resources) | nindent 12 }}
+          {{- with .Values.startupProbe }}
+          startupProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
           livenessProbe: {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe: {{- toYaml .Values.readinessProbe | nindent 12 }}
           volumeMounts:
-            - name: tmp
-              mountPath: /tmp
+            - name: staging
+              mountPath: {{ .Values.staging.mountPath }}
+            {{- if and .Values.oidc.issuer (or .Values.oidc.caCert.existingConfigMap .Values.oidc.caCert.existingSecret) }}
+            - name: oidc-ca
+              mountPath: /etc/notedthat/oidc
+              readOnly: true
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

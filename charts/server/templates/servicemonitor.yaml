@@ -18,7 +18,7 @@ spec:
   namespaceSelector: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.namespaceSelector "context" $) | nindent 4 }}
   {{- end }}
   endpoints:
-    - port: http
+    - port: metrics
       path: {{ .Values.metrics.path }}
       scheme: {{ .Values.metrics.serviceMonitor.scheme }}
       interval: {{ .Values.metrics.serviceMonitor.interval }}
