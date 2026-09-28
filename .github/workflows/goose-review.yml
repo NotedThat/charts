@@ -1,8 +1,9 @@
 # LLM review of the pull request's diff with Goose (block/goose), through
 # StephanMeijer/goose-review, pinned below by commit. What the review looks
 # for is this repository's: the checks (.agents/checks/), the facts
-# (.agents/facts/), the provider templates (.github/goose/providers/) and the
-# Helm tool hints (.agents/goose-review/tools.md).
+# (.agents/facts/), the provider templates (.github/goose/providers/), the
+# tools installed for the model (helm, kubeconform, kube-linter, actionlint)
+# and the Helm tool hints (.agents/goose-review/tools.md).
 #
 # Three lanes, one per model: DeepSeek V4 Flash and Mistral Medium 3.5 on
 # the third-party endpoint, and MiniMax M3. Each lane runs the checks that
@@ -16,7 +17,8 @@
 # the provider keys: its routes are the GOOSE_THIRDPARTY_BASE_URL and
 # GOOSE_MINIMAX_BASE_URL secrets, its token GOOSE_PROXY_TOKEN, its host the
 # GOOSE_PROXY_EGRESS variable (the only host the review job may reach beyond
-# GitHub). The review runs only once that variable is set.
+# GitHub and the downloads below). The review runs only once that variable
+# is set.
 name: Goose review
 
 on:
@@ -42,7 +44,8 @@ jobs:
       && !github.event.pull_request.draft
       && !startsWith(github.head_ref, 'release-please-')
       && !startsWith(github.event.pull_request.title, 'chore(main): release')
-    uses: StephanMeijer/goose-review/.github/workflows/review.yml@583a38a2ee99a7f01f76f39a81b9cd84076fadee # v0.3.2
+    # StephanMeijer/goose-review#3 (the `tools` input), until it is released.
+    uses: StephanMeijer/goose-review/.github/workflows/review.yml@a39c77d1dcaded889c7822900ed079970b31371f # feat/tools
     permissions:
       contents: read
       actions: read
@@ -78,10 +81,45 @@ jobs:
           verify-backup-provider: thirdparty
           verify-backup-model: deepseek-v4-flash-0731
           jobs: 2
-      # Nothing is fetched: the common library chart is in the repository,
-      # and the server chart's OCI dependency would need ghcr.io.
+      # Installed before setup, each pinned by sha256, and announced to the
+      # model with its `use` line; the commands are in tools.md.
+      tools: |
+        - name: helm
+          version: v4.1.4
+          url: https://get.helm.sh/helm-v4.1.4-linux-amd64.tar.gz
+          sha256: 70b2c30a19da4db264dfd68c8a3664e05093a361cefd89572ffb36f8abfa3d09
+          path: linux-amd64/helm
+          use: "Lint and render the charts (`helm lint`, `helm template`), the same Helm as CI; the dependencies are built."
+        - name: kubeconform
+          version: v0.8.0
+          url: https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          sha256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+          use: "Validate rendered manifests against the Kubernetes 1.28 schemas in $KUBE_SCHEMAS (offline)."
+        - name: kube-linter
+          version: v0.8.3
+          url: https://github.com/stackrox/kube-linter/releases/download/v0.8.3/kube-linter-linux.tar.gz
+          sha256: 1a6d8419b11971372971fdbc22682b684ebfb7cf1c39591662d1b6ca736c41df
+          use: "Lint rendered manifests for security and reliability (`kube-linter lint -`)."
+        - name: actionlint
+          version: v1.7.12
+          url: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          sha256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          use: "Lint a workflow: `actionlint .github/workflows/<file>` (runs shellcheck on its scripts)."
+      # Before any secret or model: the charts' dependencies (the server
+      # chart's is the released common chart, pulled anonymously from
+      # ghcr.io), so the model can render every chart offline, and the
+      # Kubernetes 1.28 JSON schemas for kubeconform.
+      setup: |
+        helm dependency build charts/server
+        helm dependency build ci/common
+        helm dependency build ci/server
+        git clone -q --depth 1 --filter=blob:none --sparse \
+          https://github.com/yannh/kubernetes-json-schema "$RUNNER_TEMP/kubernetes-json-schema"
+        git -C "$RUNNER_TEMP/kubernetes-json-schema" sparse-checkout set v1.28.0-standalone-strict
+        echo "KUBE_SCHEMAS=$RUNNER_TEMP/kubernetes-json-schema" >> "$GITHUB_ENV"
       egress-endpoints: >-
-        ["${{ vars.GOOSE_PROXY_EGRESS }}"]
+        ["get.helm.sh:443", "ghcr.io:443", "pkg-containers.githubusercontent.com:443",
+        "${{ vars.GOOSE_PROXY_EGRESS }}"]
       tools-file: .agents/goose-review/tools.md
       # Never reviewed: generated lock files and packaged charts. The
       # CHANGELOG.md files are reviewed: release PRs are skipped above, so a

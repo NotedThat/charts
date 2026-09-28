@@ -34,7 +34,9 @@ Report only when you can name all four:
 
 If a guard on the real path stops it -- the pod and container security
 contexts, `automountServiceAccountToken: false`, the NetworkPolicy, a
-job's `permissions:` -- there is no finding.
+job's `permissions:` -- there is no finding. Render the chart to see what
+a default really produces, and use `kube-linter` on it and `actionlint` on
+a changed workflow; what they report on the base too is not the change's.
 
 ## Severity
 

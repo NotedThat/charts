@@ -13,6 +13,10 @@ values.yaml (and charts/server/README.md); the common library chart's
 contract is its `common.*` helpers, which the server chart and other charts
 include by name.
 
+Render the chart on the base and the head with the same values (the tools
+section says how) and compare: a rendered difference for an existing
+values file is what users see on upgrade.
+
 Report a change that, without being declared as breaking:
 
 - removes, renames or moves a values key, or changes its type, so a values
