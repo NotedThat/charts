@@ -1,0 +1,98 @@
+# LLM review of the pull request's diff with Goose (block/goose), through
+# StephanMeijer/goose-review, pinned below by commit. What the review looks
+# for is this repository's: the checks (.agents/checks/), the facts
+# (.agents/facts/), the provider templates (.github/goose/providers/) and the
+# Helm tool hints (.agents/goose-review/tools.md).
+#
+# Three lanes, one per model: DeepSeek V4 Flash and Mistral Medium 3.5 on
+# the third-party endpoint, and MiniMax M3. Each lane runs the checks that
+# cover the changed files with its own model; a model of another family
+# re-checks every finding against the code, and only confirmed findings are
+# posted, signed with both models. Each verifier has the other as its backup
+# for when its provider is down. Advisory only: it posts COMMENT reviews and
+# never fails the pull request.
+#
+# Every model call goes through the self-hosted egress proxy, which holds
+# the provider keys: its routes are the GOOSE_THIRDPARTY_BASE_URL and
+# GOOSE_MINIMAX_BASE_URL secrets, its token GOOSE_PROXY_TOKEN, its host the
+# GOOSE_PROXY_EGRESS variable (the only host the review job may reach beyond
+# GitHub). The review runs only once that variable is set.
+name: Goose review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# A push never cancels a review in progress: it finishes and posts, and the
+# newest push is reviewed after it (pushes in between are skipped; every run
+# reviews the whole diff).
+concurrency:
+  group: goose-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  goose-review:
+    # Fork PRs get no secrets; release PRs are generated; drafts wait until
+    # they are marked ready.
+    if: >-
+      vars.GOOSE_PROXY_EGRESS != ''
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && !github.event.pull_request.draft
+      && !startsWith(github.head_ref, 'release-please-')
+      && !startsWith(github.event.pull_request.title, 'chore(main): release')
+    uses: StephanMeijer/goose-review/.github/workflows/review.yml@583a38a2ee99a7f01f76f39a81b9cd84076fadee # v0.3.2
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+    with:
+      lanes: |
+        - lane: deepseek
+          provider: thirdparty
+          model: deepseek-v4-flash-0731
+          verify-provider: minimax
+          verify-model: MiniMax-M3
+          verify-backup-provider: thirdparty
+          verify-backup-model: deepseek-v4-flash-0731
+          # The endpoint caps DeepSeek's input tokens a minute, and every
+          # agent turn resends the whole conversation.
+          jobs: 2
+
+        - lane: minimax
+          provider: minimax
+          model: MiniMax-M3
+          verify-provider: thirdparty
+          verify-model: deepseek-v4-flash-0731
+          verify-backup-provider: minimax
+          verify-backup-model: MiniMax-M3
+          jobs: 3
+
+        - lane: mistral
+          provider: thirdparty
+          model: mistral-medium-3-5
+          verify-provider: minimax
+          verify-model: MiniMax-M3
+          verify-backup-provider: thirdparty
+          verify-backup-model: deepseek-v4-flash-0731
+          jobs: 2
+      # Nothing is fetched: the common library chart is in the repository,
+      # and the server chart's OCI dependency would need ghcr.io.
+      egress-endpoints: >-
+        ["${{ vars.GOOSE_PROXY_EGRESS }}"]
+      tools-file: .agents/goose-review/tools.md
+      # Never reviewed: generated lock files and packaged charts. The
+      # CHANGELOG.md files are reviewed: release PRs are skipped above, so a
+      # change to one here is a hand edit, which the docs-drift check flags.
+      ignore: |
+        **/Chart.lock
+        **/*.tgz
+        LICENSE
+    secrets:
+      PROVIDER_ROUTES: |
+        thirdparty=${{ secrets.GOOSE_THIRDPARTY_BASE_URL }}
+        minimax=${{ secrets.GOOSE_MINIMAX_BASE_URL }}
+      PROVIDER_ENV: |
+        GOOSE_PROXY_TOKEN=${{ secrets.GOOSE_PROXY_TOKEN }}
