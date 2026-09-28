@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/NotedThat/charts/compare/server-v0.1.2...server-v0.2.0) (2026-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** metrics.port is removed and metrics are scraped on the new `metrics` port; configuration previously passed through extraEnvVars belongs in the new value blocks; readiness uses /readyz; networkPolicy.allowExternalEgress defaults to true.
+
+### Features
+
+* **server:** support NotedThat 0.12 configuration ([f12217b](https://github.com/NotedThat/charts/commit/f12217b6c16c237a9bcf06008aa8089ef8c3c812))
+
 ## [0.1.2](https://github.com/NotedThat/charts/compare/server-v0.1.1...server-v0.1.2) (2026-07-14)
 
 
