@@ -52,6 +52,17 @@ spec:
           {{- end }}
         {{- end }}
       {{- end }}
+    {{- if .Values.metrics.enabled }}
+    # The metrics listener is unauthenticated: scrapers only, never external.
+    - ports:
+        - port: {{ .Values.containerPorts.metrics }}
+      from:
+        {{- if .Values.networkPolicy.metricsFrom }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.metricsFrom "context" $) | nindent 8 }}
+        {{- else }}
+        - namespaceSelector: {}
+        {{- end }}
+    {{- end }}
     {{- if .Values.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.extraIngress "context" $) | nindent 4 }}
     {{- end }}

@@ -1,0 +1,33 @@
+suite: metrics
+templates:
+  - service.yaml
+  - servicemonitor.yaml
+  - networkpolicy.yaml
+values:
+  - values/required.yaml
+set:
+  metrics.enabled: true
+  metrics.serviceMonitor.enabled: true
+tests:
+  - it: exposes the metrics port on the service
+    template: service.yaml
+    asserts:
+      - contains:
+          path: spec.ports
+          content: {port: 9090, targetPort: metrics, protocol: TCP, name: metrics}
+
+  - it: scrapes the metrics port
+    template: servicemonitor.yaml
+    asserts:
+      - equal:
+          path: spec.endpoints[0].port
+          value: metrics
+
+  - it: admits in-cluster scrapers only to the metrics port
+    template: networkpolicy.yaml
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            ports: [{port: 9090}]
+            from: [{namespaceSelector: {}}]

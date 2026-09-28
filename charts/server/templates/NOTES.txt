@@ -1,26 +1,47 @@
 {{- $localPort := .Values.service.port -}}
-NotedThat server is now installed.
+NotedThat server {{ .Chart.AppVersion }} is now installed.
+
+Knowledge bases: {{ join ", " .Values.knowledgebases }}
 
 Get the server URL:
 {{- if .Values.ingress.enabled }}
-  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostname }}/
+  {{ include "server.ingressUrl" . }}/
 {{- else }}
   kubectl port-forward svc/{{ include "server.names.fullname" . }} {{ $localPort }}:{{ .Values.service.port }} -n {{ include "server.names.namespace" . }}
   Then: http://localhost:{{ $localPort }}/
 {{- end }}
 
-Health check:
+Health and readiness:
   curl http://localhost:{{ $localPort }}/healthz
+  curl http://localhost:{{ $localPort }}/readyz
+
+Surfaces on the one port: /api/v1, /webdav, /mcp, /browse.
+{{- if .Values.ingress.enabled }}
+
+Your ingress controller must not buffer responses (GET /mcp and the events
+stream are long-lived), must allow a read timeout well above 15s (1h is
+typical), must not cap request bodies (WebDAV uploads) and must preserve the
+Host header (MCP checks it against {{ include "server.envValue" (.Values.mcp.allowedHosts | default (list .Values.ingress.hostname)) }}).
+See the chart README for ingress-nginx annotations.
+{{- end }}
 {{- if .Values.metrics.enabled }}
 
-Prometheus metrics:
+Prometheus metrics are served on a separate, unauthenticated listener on port
+{{ .Values.containerPorts.metrics }} ({{ .Values.metrics.path }}). Never route it through the Ingress.
 {{- if .Values.metrics.serviceMonitor.enabled }}
   Scraped via ServiceMonitor {{ include "server.names.fullname" . }} in namespace {{ include "server.names.namespace" . }}.
 {{- else if .Values.metrics.podAnnotations.enabled }}
-  Scraped via pod annotations (prometheus.io/scrape=true, path={{ .Values.metrics.path }}).
+  Scraped via pod annotations (prometheus.io/scrape=true, port={{ .Values.containerPorts.metrics }}).
 {{- else }}
-  Exposed at {{ .Values.metrics.path }} on port {{ .Values.containerPorts.http }}, but no discovery is enabled.
-  Set metrics.serviceMonitor.enabled=true or metrics.podAnnotations.enabled=true to make Prometheus find it.
+  No discovery is enabled. Set metrics.serviceMonitor.enabled=true or
+  metrics.podAnnotations.enabled=true to make Prometheus find it.
 {{- end }}
-  Warning: {{ .Values.metrics.path }} has no authentication. Restrict access via NetworkPolicy or a private topology.
+{{- end }}
+{{- if or .Values.autoscaling.enabled (gt (int .Values.replicaCount) 1) }}
+
+WARNING: more than one replica.
+  - MCP sessions live in one process: route /mcp with sticky sessions.
+{{- if eq .Values.events.backend "memory" }}
+  - events.backend=memory keeps a separate event log per replica; use nats.
+{{- end }}
 {{- end }}

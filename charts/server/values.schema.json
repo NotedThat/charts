@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "NotedThat server chart values",
+  "type": "object",
+  "properties": {
+    "auth": {
+      "type": "object",
+      "properties": {
+        "apiToken": {
+          "type": "string"
+        },
+        "webdav": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          }
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKeys": {
+          "type": "object",
+          "properties": {
+            "apiToken": {
+              "type": "string"
+            },
+            "webdavUsername": {
+              "type": "string"
+            },
+            "webdavPassword": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "knowledgebases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]{1,40}$"
+      },
+      "uniqueItems": true
+    },
+    "s3": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "type": "string"
+        },
+        "endpointUrl": {
+          "type": "string"
+        },
+        "forcePathStyle": {
+          "type": "boolean"
+        },
+        "reconcile": {
+          "type": "boolean"
+        },
+        "allowUnenforcedConditionalWrites": {
+          "type": "boolean"
+        },
+        "accessKeyId": {
+          "type": "string"
+        },
+        "secretAccessKey": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKeys": {
+          "type": "object",
+          "properties": {
+            "accessKeyId": {
+              "type": "string"
+            },
+            "secretAccessKey": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "qdrant": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKeys": {
+          "type": "object",
+          "properties": {
+            "apiKey": {
+              "type": "string"
+            }
+          }
+        },
+        "timeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "connectTimeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "embedding": {
+      "type": "object",
+      "properties": {
+        "endpointUrl": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "dimensions": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKeys": {
+          "type": "object",
+          "properties": {
+            "apiKey": {
+              "type": "string"
+            }
+          }
+        },
+        "batchSize": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "timeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "maxRetries": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "maxInputTokens": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "oidc": {
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "usernameClaim": {
+          "type": "string"
+        },
+        "groupsClaim": {
+          "type": "string"
+        },
+        "httpTimeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "resource": {
+          "type": "string"
+        },
+        "caCert": {
+          "type": "object",
+          "properties": {
+            "existingConfigMap": {
+              "type": "string"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "properties": {
+        "backend": {
+          "type": "string",
+          "enum": [
+            "none",
+            "memory",
+            "nats"
+          ]
+        },
+        "memoryCapacity": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "nats": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "secretKeys": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                }
+              }
+            },
+            "stream": {
+              "type": "string"
+            },
+            "maxAgeSecs": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowedOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anonymous": {
+          "type": "string",
+          "enum": [
+            "",
+            "auto",
+            "never"
+          ]
+        },
+        "maxSessions": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "maxReadBytes": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "logFormat": {
+          "type": "string",
+          "enum": [
+            "",
+            "pretty",
+            "json"
+          ]
+        },
+        "rustLog": {
+          "type": "string"
+        },
+        "maxPatchableSize": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "requestTimeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "webdavRequestTimeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "maxRequestsInFlight": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "headerReadTimeoutMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "readyProbeIntervalMs": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "staging": {
+      "type": "object",
+      "properties": {
+        "mountPath": {
+          "type": "string"
+        },
+        "sizeLimit": {
+          "type": "string"
+        }
+      }
+    },
+    "containerPorts": {
+      "type": "object",
+      "properties": {
+        "http": {
+          "type": "integer"
+        },
+        "metrics": {
+          "type": "integer"
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "metricsPort": {
+          "type": "integer"
+        }
+      }
+    },
+    "terminationGracePeriodSeconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

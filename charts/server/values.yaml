@@ -3,6 +3,169 @@ global:
   imagePullSecrets: []
   storageClass: ""
 
+## ---------------------------------------------------------------------------
+## NotedThat application configuration
+##
+## Each block below maps onto the server's environment variables, documented in
+## https://github.com/NotedThat/NotedThat/blob/main/docs/CONFIGURATION.md
+##
+## Optional settings left empty ("") are not rendered at all: the server treats
+## an empty variable as *supplied* and refuses to start for several of them.
+## Required settings are checked when the chart renders, so a missing value
+## fails `helm install` instead of crash-looping the pod.
+##
+## Secret-bearing values are either given inline (the chart stores them in a
+## Secret named after the release) or read from an `existingSecret` you manage.
+## `secretKeys` names the keys looked up in that Secret.
+## ---------------------------------------------------------------------------
+
+auth:
+  # NOTEDTHAT_API_TOKEN — the deployment's service token. Required.
+  apiToken: ""
+  # NOTEDTHAT_WEBDAV_USERNAME / NOTEDTHAT_WEBDAV_PASSWORD — WebDAV Basic auth.
+  # Resolves to the same principal as the service token. Required.
+  webdav:
+    username: ""
+    password: ""
+  existingSecret: ""
+  secretKeys:
+    apiToken: api-token
+    webdavUsername: webdav-username
+    webdavPassword: webdav-password
+
+# NOTEDTHAT_KBS — knowledge base slugs, each matching [a-z0-9-]{1,40}. Required.
+knowledgebases: []
+
+# S3-compatible object store (NOTEDTHAT_STORAGE_BACKEND=s3). The chart supports
+# the s3 backend only; the fs backend needs a single process per volume.
+s3:
+  # NOTEDTHAT_S3_REGION — required, even with a custom endpoint.
+  region: ""
+  # NOTEDTHAT_S3_ENDPOINT_URL — required for SeaweedFS, MinIO, Ceph, Garage, R2.
+  endpointUrl: ""
+  # NOTEDTHAT_S3_FORCE_PATH_STYLE — true for most self-hosted stores.
+  forcePathStyle: false
+  # NOTEDTHAT_S3_RECONCILE — compare buckets against the index at startup.
+  reconcile: true
+  # NOTEDTHAT_S3_ALLOW_UNENFORCED_CONDITIONAL_WRITES — start on a store that
+  # ignores If-Match / If-None-Match. Concurrent writes can be lost.
+  allowUnenforcedConditionalWrites: false
+  # NOTEDTHAT_S3_ACCESS_KEY_ID / NOTEDTHAT_S3_SECRET_ACCESS_KEY — required.
+  accessKeyId: ""
+  secretAccessKey: ""
+  existingSecret: ""
+  secretKeys:
+    accessKeyId: access-key-id
+    secretAccessKey: secret-access-key
+
+# Qdrant >= 1.15.2 (gRPC).
+qdrant:
+  # NOTEDTHAT_QDRANT_URL — gRPC endpoint, e.g. http://qdrant.qdrant.svc:6334. Required.
+  url: ""
+  # NOTEDTHAT_QDRANT_API_KEY — optional.
+  apiKey: ""
+  existingSecret: ""
+  secretKeys:
+    apiKey: api-key
+  # NOTEDTHAT_QDRANT_TIMEOUT_MS / NOTEDTHAT_QDRANT_CONNECT_TIMEOUT_MS
+  timeoutMs: ""
+  connectTimeoutMs: ""
+
+# OpenAI-compatible embedding endpoint (EMBEDDING_*).
+embedding:
+  # EMBEDDING_ENDPOINT_URL, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS — required.
+  endpointUrl: ""
+  model: ""
+  dimensions: ""
+  # EMBEDDING_API_KEY — required; any value for endpoints that ignore it (TEI).
+  apiKey: ""
+  existingSecret: ""
+  secretKeys:
+    apiKey: api-key
+  batchSize: ""
+  timeoutMs: ""
+  maxRetries: ""
+  maxInputTokens: ""
+
+# OpenID Connect identity tokens. Leave issuer empty to accept only the
+# service token. Setting any other oidc value without an issuer fails.
+oidc:
+  # NOTEDTHAT_OIDC_ISSUER — exactly as the provider spells `iss`, trailing slash included.
+  issuer: ""
+  # NOTEDTHAT_OIDC_AUDIENCE — required with the issuer.
+  audience: []
+  usernameClaim: ""
+  groupsClaim: ""
+  httpTimeoutMs: ""
+  # NOTEDTHAT_OIDC_RESOURCE — this deployment's public URL (publishes RFC 9728
+  # metadata for MCP clients). Defaults to the ingress URL when the ingress is enabled.
+  resource: ""
+  # Extra CA bundle for reaching the issuer (NOTEDTHAT_OIDC_CA_CERT), from a
+  # ConfigMap or a Secret you manage.
+  caCert:
+    existingConfigMap: ""
+    existingSecret: ""
+    key: ca.crt
+
+# Object change events (NOTEDTHAT_EVENTS_BACKEND): none, memory or nats.
+# `memory` is per process — with more than one replica use `nats`.
+events:
+  backend: none
+  # NOTEDTHAT_EVENTS_MEMORY_CAPACITY
+  memoryCapacity: ""
+  nats:
+    # NOTEDTHAT_NATS_URL — may carry credentials, so it is stored as a secret.
+    url: ""
+    existingSecret: ""
+    secretKeys:
+      url: nats-url
+    stream: ""
+    maxAgeSecs: ""
+
+# Remote MCP at /mcp.
+mcp:
+  # NOTEDTHAT_MCP_HTTP_ALLOWED_HOSTS — empty with the ingress enabled means
+  # [ingress.hostname]; empty otherwise leaves the server's loopback default.
+  allowedHosts: []
+  # NOTEDTHAT_MCP_HTTP_ALLOWED_ORIGINS — empty with the ingress enabled means
+  # the ingress URL; empty otherwise leaves the server's default.
+  allowedOrigins: []
+  # NOTEDTHAT_MCP_ANONYMOUS — auto or never.
+  anonymous: ""
+  maxSessions: ""
+  maxReadBytes: ""
+
+# General server tuning. All optional.
+server:
+  # NOTEDTHAT_LOG_FORMAT — pretty or json.
+  logFormat: json
+  # RUST_LOG
+  rustLog: ""
+  maxPatchableSize: ""
+  requestTimeoutMs: ""
+  # NOTEDTHAT_WEBDAV_REQUEST_TIMEOUT_MS (server default 120000). Raising it also
+  # needs a longer terminationGracePeriodSeconds.
+  webdavRequestTimeoutMs: ""
+  maxRequestsInFlight: ""
+  headerReadTimeoutMs: ""
+  readyProbeIntervalMs: ""
+
+# Staging directory for WebDAV uploads and index snapshots
+# (NOTEDTHAT_UPLOAD_TMP_DIR). Mandatory under a read-only root filesystem.
+# Backed by a disk emptyDir; never use a memory-backed volume here. Budget
+# roughly 5Gi per concurrent maximum-size upload. An emptyDir counts against
+# the container's ephemeral-storage limit (2Gi with resourcesPreset "small"), so
+# set `resources` explicitly when large WebDAV uploads are expected.
+staging:
+  mountPath: /var/lib/notedthat-staging
+  sizeLimit: ""
+
+## ---------------------------------------------------------------------------
+## Kubernetes resources
+## ---------------------------------------------------------------------------
+
+# More than one replica needs sticky routing for MCP sessions (held per process)
+# and events.backend=nats instead of memory.
 replicaCount: 1
 
 image:
@@ -46,10 +209,17 @@ containerSecurityContext:
 
 containerPorts:
   http: 8080
+  # Separate metrics listener, only opened when metrics.enabled=true.
+  metrics: 9090
 
 service:
   type: ClusterIP
   port: 8080
+  metricsPort: 9090
+
+# Shutdown finishes in-flight requests (up to 120s on /webdav) and then drains
+# the indexer for up to 31s. Keep this above both plus a margin.
+terminationGracePeriodSeconds: 165
 
 ingress:
   enabled: false
@@ -80,11 +250,25 @@ podDisruptionBudget:
 networkPolicy:
   enabled: true
   allowExternal: true
-  allowExternalEgress: false
+  # The server must reach S3, Qdrant, the embedding endpoint and (if set) NATS
+  # and the OIDC issuer. Set to false and list them in extraEgress to tighten.
+  allowExternalEgress: true
   extraIngress: []
   extraEgress: []
   ingressNSMatchLabels: {}
   ingressNSPodMatchLabels: {}
+  # Peers allowed to reach the metrics port. Empty admits any pod in the
+  # cluster (never traffic from outside it, since the port is not in the Ingress).
+  metricsFrom: []
+
+# Storage, Qdrant, NATS and OIDC are provisioned before the listener binds.
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
 
 livenessProbe:
   httpGet:
@@ -97,21 +281,20 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /healthz
+    path: /readyz
     port: http
   initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 3
 
-# /metrics has NO auth and shares the server port. Restrict via networkPolicy
-# (source-scoped) or a service-mesh policy. Do NOT expose it via Ingress.
+# Prometheus metrics on a separate listener (NOTEDTHAT_METRICS_ENABLED), bound
+# to containerPorts.metrics. The exposition has NO auth: it is never routed by
+# the Ingress, and networkPolicy.metricsFrom limits who can scrape it.
 metrics:
   enabled: false
+  # Fixed by the server; used for the scrape annotations and the ServiceMonitor.
   path: /metrics
-  # Empty = fall back to containerPorts.http. Applies to the prometheus.io/port
-  # pod annotation only — ServiceMonitor uses the Service's named 'http' port.
-  port: ""
   # Vanilla Prometheus kubernetes_sd_configs pod discovery.
   podAnnotations:
     enabled: false

@@ -1,0 +1,136 @@
+suite: deployment
+templates:
+  - deployment.yaml
+values:
+  - values/required.yaml
+tests:
+  - it: listens on the http port and stages uploads on a disk emptyDir
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_LISTEN_ADDR, value: "0.0.0.0:8080"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_UPLOAD_TMP_DIR, value: /var/lib/notedthat-staging}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: staging, emptyDir: {}}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: PORT, value: "8080"}
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 165
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /readyz
+
+  - it: omits optional settings that are not set
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content: {name: NOTEDTHAT_METRICS_LISTEN_ADDR}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content: {name: NOTEDTHAT_QDRANT_API_KEY}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content: {name: NOTEDTHAT_OIDC_ISSUER}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content: {name: NOTEDTHAT_MCP_HTTP_ALLOWED_HOSTS}
+
+  - it: prints large numbers as integers
+    set:
+      server.maxPatchableSize: 104857600
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_MAX_PATCHABLE_SIZE, value: "104857600"}
+
+  - it: reads credentials from the chart secret by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NOTEDTHAT_API_TOKEN
+            valueFrom: {secretKeyRef: {name: RELEASE-NAME-server, key: api-token}}
+      - exists:
+          path: spec.template.metadata.annotations["checksum/secret"]
+
+  - it: reads credentials from an existing secret with custom keys
+    set:
+      auth.existingSecret: my-auth
+      auth.secretKeys.apiToken: token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NOTEDTHAT_API_TOKEN
+            valueFrom: {secretKeyRef: {name: my-auth, key: token}}
+
+  - it: opens the metrics listener on its own port
+    set:
+      metrics.enabled: true
+      metrics.podAnnotations.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_METRICS_LISTEN_ADDR, value: "0.0.0.0:9090"}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: metrics, containerPort: 9090, protocol: TCP}
+      - equal:
+          path: spec.template.metadata.annotations["prometheus.io/port"]
+          value: "9090"
+
+  - it: derives the MCP allow-lists from the ingress
+    set:
+      ingress.enabled: true
+      ingress.hostname: notes.example.com
+      ingress.tls: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_MCP_HTTP_ALLOWED_HOSTS, value: notes.example.com}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_MCP_HTTP_ALLOWED_ORIGINS, value: "https://notes.example.com"}
+
+  - it: wires OIDC with a CA bundle and defaults the resource to the ingress
+    set:
+      ingress.enabled: true
+      ingress.hostname: notes.example.com
+      oidc.issuer: https://auth.example.com/
+      oidc.audience: [notedthat, mcp-client]
+      oidc.caCert.existingConfigMap: internal-ca
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_OIDC_AUDIENCE, value: "notedthat,mcp-client"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_OIDC_RESOURCE, value: "http://notes.example.com"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NOTEDTHAT_OIDC_CA_CERT, value: /etc/notedthat/oidc/ca.pem}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: oidc-ca
+            configMap: {name: internal-ca, items: [{key: ca.crt, path: ca.pem}]}
+
+  - it: reads the NATS URL from a secret
+    set:
+      events.backend: nats
+      events.nats.url: nats://nats:4222
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NOTEDTHAT_NATS_URL
+            valueFrom: {secretKeyRef: {name: RELEASE-NAME-server, key: nats-url}}

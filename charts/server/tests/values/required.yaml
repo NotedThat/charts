@@ -1,0 +1,17 @@
+auth:
+  apiToken: t
+  webdav:
+    username: u
+    password: p
+knowledgebases: [notes]
+s3:
+  region: us-east-1
+  accessKeyId: ak
+  secretAccessKey: sk
+qdrant:
+  url: http://qdrant:6334
+embedding:
+  endpointUrl: http://tei:80
+  model: BAAI/bge-m3
+  dimensions: 1024
+  apiKey: any

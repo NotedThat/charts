@@ -3,7 +3,7 @@
 image:
   registry: ghcr.io
   repository: notedthat/server
-  tag: "0.1.0"
+  tag: "0.12.0"
 
 serviceAccount:
   create: true
@@ -17,10 +17,42 @@ global:
 server:
   replicaCount: 1
 
+  auth:
+    apiToken: ci-token
+    webdav:
+      username: ci-webdav
+      password: ci-webdav-password
+
+  knowledgebases:
+    - notes
+    - scratch
+
+  s3:
+    region: us-east-1
+    endpointUrl: http://seaweedfs.storage.svc.cluster.local:8333
+    forcePathStyle: true
+    accessKeyId: ci-access-key
+    secretAccessKey: ci-secret-key
+
+  qdrant:
+    url: http://qdrant.storage.svc.cluster.local:6334
+
+  embedding:
+    endpointUrl: http://tei.storage.svc.cluster.local:80
+    model: BAAI/bge-m3
+    dimensions: 1024
+    apiKey: any
+
+  events:
+    backend: memory
+
+  server:
+    maxPatchableSize: 104857600
+
   image:
     registry: ghcr.io
     repository: notedthat/server
-    tag: "0.1.0"
+    tag: "0.12.0"
 
   serviceAccount:
     create: true
@@ -43,6 +75,7 @@ server:
 
   containerPorts:
     http: 8080
+    metrics: 9090
 
   podDisruptionBudget:
     enabled: true
