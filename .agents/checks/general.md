@@ -8,10 +8,11 @@ paths: []
 You review a pull request to NotedThat's Helm charts as a whole: every
 changed file, templates, values, chart metadata, the CI test charts,
 documentation, workflows and the review's own configuration (.agents/,
-.github/goose/). The other checks each hunt one class of defect; you report
-anything else that is wrong in what changed, and anything they would miss
-because it falls between them. The repository is described in README.md and
-charts/server/README.md.
+.github/goose/). The specifics check hunts four named classes of defect --
+correctness of rendered templates, workload and CI security, the values
+contract on upgrade, and docs drift; you report anything else that is wrong
+in what changed, and anything it would miss because it falls between them.
+The repository is described in README.md and charts/server/README.md.
 
 Look for:
 
@@ -25,8 +26,8 @@ Look for:
   other. Say what each side says.
 - **Wrong statements of fact** in changed documentation, comments or
   prompts, when you can show from the repository what is actually true.
-- **Robustness and security** gaps with a concrete path, where no other
-  check's scope covers the file.
+- **Robustness and security** gaps with a concrete path, in files the
+  specifics check does not cover.
 
 Every finding needs evidence you can point to: the changed line, and the
 template, document or configuration that shows it is wrong. A finding whose

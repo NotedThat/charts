@@ -123,7 +123,8 @@ jobs:
       tools-file: .agents/goose-review/tools.md
       # Never reviewed: generated lock files and packaged charts. The
       # CHANGELOG.md files are reviewed: release PRs are skipped above, so a
-      # change to one here is a hand edit, which the docs-drift check flags.
+      # change to one here is a hand edit, which the specifics check flags
+      # (docs drift).
       ignore: |
         **/Chart.lock
         **/*.tgz
