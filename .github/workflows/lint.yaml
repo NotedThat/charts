@@ -10,7 +10,7 @@ on:
 
 jobs:
   helm-lint:
-    runs-on: ubuntu-latest
+    runs-on: 9xx
     permissions:
       contents: read
       packages: read
@@ -35,7 +35,7 @@ jobs:
           helm lint charts/server
 
   template-test:
-    runs-on: ubuntu-latest
+    runs-on: 9xx
     permissions:
       contents: read
       packages: read
